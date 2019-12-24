@@ -24,7 +24,16 @@
 using namespace ov_core;
 using namespace ov_msckf;
 
-
+/**
+ * @brief https://docs.openvins.com/update-feat.html#feat-rep-anchor-inv2 主要就是这里的公式
+ * 关于 fej 的部分没太理解
+ * 
+ * @param state 
+ * @param feature 
+ * @param H_f 
+ * @param H_x 
+ * @param x_order 
+ */
 void UpdaterHelper::get_feature_jacobian_representation(State* state, UpdaterHelperFeature &feature, Eigen::Matrix<double,3,3> &H_f,
                                                         std::vector<Eigen::Matrix<double,3,Eigen::Dynamic>> &H_x, std::vector<Type*> &x_order) {
 
@@ -44,6 +53,7 @@ void UpdaterHelper::get_feature_jacobian_representation(State* state, UpdaterHel
         // Get inverse depth representation (should match what is in Landmark.cpp)
         double g_rho = 1/p_FinG.norm();
         double g_phi = std::acos(g_rho*p_FinG(2));
+        // TODO: 很多代码里都是这么操作的（明明理论上能够用 asin 计算，但还是转换成 atan 计算），不太明白为啥
         //double g_theta = std::asin(g_rho*p_FinG(1)/std::sin(g_phi));
         double g_theta = std::atan2(p_FinG(1),p_FinG(0));
         Eigen::Matrix<double,3,1> p_invFinG;
@@ -90,6 +100,7 @@ void UpdaterHelper::get_feature_jacobian_representation(State* state, UpdaterHel
         // Transform the best into our anchor frame using FEJ
         R_GtoI = state->get_clone(feature.anchor_clone_timestamp)->Rot_fej();
         p_IinG = state->get_clone(feature.anchor_clone_timestamp)->pos_fej();
+        // TODO: 为什么不直接用 p_FinA_fej，还是没理解 FEJ
         p_FinA = (R_GtoI.transpose()*R_ItoC.transpose()).transpose()*(p_FinG_best - p_IinG) + p_IinC;
     }
     Eigen::Matrix3d R_CtoG = R_GtoI.transpose()*R_ItoC.transpose();
@@ -479,6 +490,7 @@ void UpdaterHelper::get_feature_jacobian_full(State* state, UpdaterHelperFeature
             if(state->options().do_fej) {
                 R_GtoIi = clone_Ii->Rot_fej();
                 p_IiinG = clone_Ii->pos_fej();
+                // TODO: 脑壳疼，为啥有的地方用 fej，有的不用啊。。
                 //R_ItoC = calibration->Rot_fej();
                 //p_IinC = calibration->pos_fej();
                 p_FinIi = R_GtoIi*(p_FinG_fej-p_IiinG);
@@ -562,6 +574,7 @@ void UpdaterHelper::get_feature_jacobian_full(State* state, UpdaterHelperFeature
 void UpdaterHelper::nullspace_project_inplace(Eigen::MatrixXd &H_f, Eigen::MatrixXd &H_x, Eigen::VectorXd &res) {
 
     // Apply the left nullspace of H_f to all variables
+    // TODO: msckf_vio 里直接用的 QR 分解，这里的 Givens 旋转原理还没了解过
     Eigen::JacobiRotation<double> tempHo_GR;
     for (int n = 0; n < H_f.cols(); ++n) {
         for (int m = (int) H_f.rows() - 1; m > n; m--) {

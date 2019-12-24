@@ -146,6 +146,9 @@ namespace ov_core {
         int _id = -1;
 
         /// Dimension of error state
+        // 注意这里是 error state 的维度，一般也是状态的自由度
+        // 但不是 value 和 fej 的维度，因为它们存的是  estimate state，
+        // 如果有四元数的话，value 维度一般会比 size 大 1
         int _size = -1;
 
 

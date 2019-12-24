@@ -109,10 +109,10 @@ int main(int argc, char** argv)
     rosbag::View view;
 
     // Start a few seconds in from the full view time
-    // If we have a negative duration then use the full bag length
     view_full.addQuery(bag);
     ros::Time time_init = view_full.getBeginTime();
     time_init += ros::Duration(bag_start);
+    // If we have a negative duration then use the full bag length
     ros::Time time_finish = (bag_durr < 0)? view_full.getEndTime() : time_init + ros::Duration(bag_durr);
     ROS_INFO("time start = %.6f", time_init.toSec());
     ROS_INFO("time end   = %.6f", time_finish.toSec());

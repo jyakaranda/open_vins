@@ -60,6 +60,7 @@ void Propagator::propagate_and_clone(State* state, double timestamp) {
     double t_off_new = state->calib_dt_CAMtoIMU()->value()(0);
 
     // First lets construct an IMU vector of measurements we need
+    // 都是细节
     double time0 = state->timestamp()+last_prop_time_offset;
     double time1 = timestamp+t_off_new;
     vector<IMUDATA> prop_data = Propagator::select_imu_readings(imu_data,time0,time1);
@@ -86,6 +87,7 @@ void Propagator::propagate_and_clone(State* state, double timestamp) {
         // Pii' = F*Pii*F.transpose() + G*Q*G.transpose()
         // Pci' = F*Pci and Pic' = Pic*F.transpose()
         // NOTE: Here we are summing the state transition F so we can do a single mutiplication later
+        // TODO: 推导？
         // NOTE: Phi_summed = Phi_i*Phi_summed
         // NOTE: Q_summed = Phi_i*Q_summed*Phi_i^T + G*Q_i*G^T
         Phi_summed = F * Phi_summed;
@@ -202,6 +204,7 @@ std::vector<Propagator::IMUDATA> Propagator::select_imu_readings(const std::vect
     // If we did not reach the whole integration period (i.e., the last inertial measurement we have is smaller then the time we want to reach)
     // Then we should just "stretch" the last measurement to be the whole period
     if(imu_data.at(imu_data.size()-1).timestamp <= time1) {
+        // TODO: 这个不是挺正常的么。每次调用 propagate_and_clone 是在图像过来的时候，此时不就是应该比所有 imu 数据都要新么
         std::cerr << "Propagator::select_imu_readings(): There are not enough measurements to propagate with " << (time1-imu_data.at(imu_data.size()-1).timestamp) << " sec missing" << std::endl;
         std::cerr << "Propagator::select_imu_readings(): IMU-CAMERA time offset is likely messed up, check time offset value!!!" << std::endl;
         std::cerr << __FILE__ << " on line " << __LINE__ << std::endl;
@@ -268,6 +271,7 @@ void Propagator::predict_and_compute(State *state, const IMUDATA data_minus, con
     // Now compute Jacobian of new state wrt old state and noise
     if (state->options().do_fej) {
 
+        // TODO: 还是没弄明白 FEJ 的原理
         // This is the change in the orientation from the end of the last prop to the current prop
         // This is needed since we need to include the "k-th" updated orientation information
         Eigen::Matrix<double,3,3> Rfej = state->imu()->Rot_fej();
@@ -280,6 +284,7 @@ void Propagator::predict_and_compute(State *state, const IMUDATA data_minus, con
         F.block(th_id, bg_id, 3, 3).noalias() = -dR * Jr_so3(-w_hat * dt) * dt;
         //F.block(th_id, bg_id, 3, 3).noalias() = -dR * Jr_so3(-log_so3(dR)) * dt;
         F.block(bg_id, bg_id, 3, 3).setIdentity();
+        // 伴随性质
         F.block(v_id, th_id, 3, 3).noalias() = -skew_x(new_v-v_fej+_gravity*dt)*Rfej.transpose();
         //F.block(v_id, th_id, 3, 3).noalias() = -Rfej.transpose() * skew_x(Rfej*(new_v-v_fej+_gravity*dt));
         F.block(v_id, v_id, 3, 3).setIdentity();
@@ -302,7 +307,9 @@ void Propagator::predict_and_compute(State *state, const IMUDATA data_minus, con
 
         Eigen::Matrix<double,3,3> R_Gtoi = state->imu()->Rot();
 
+        // 其实是 Phi
         F.block(th_id, th_id, 3, 3) = exp_so3(-w_hat * dt);
+        // 关闭混淆检查，提升效率 https://www.cnblogs.com/houkai/p/6349990.html
         F.block(th_id, bg_id, 3, 3).noalias() = -exp_so3(-w_hat * dt) * Jr_so3(-w_hat * dt) * dt;
         F.block(bg_id, bg_id, 3, 3).setIdentity();
         F.block(v_id, th_id, 3, 3).noalias() = -R_Gtoi.transpose() * skew_x(a_hat * dt);
@@ -398,12 +405,12 @@ void Propagator::predict_mean_rk4(State *state, double dt,
     Eigen::Vector4d q_0 = state->imu()->quat();
     Eigen::Vector3d p_0 = state->imu()->pos();
     Eigen::Vector3d v_0 = state->imu()->vel();
+    Eigen::Vector4d dq_0 = {0,0,0,1};
+    Eigen::Matrix3d R_Gto0 = quat_2_Rot(quat_multiply(dq_0,q_0));
 
     // k1 ================
-    Eigen::Vector4d dq_0 = {0,0,0,1};
     Eigen::Vector4d q0_dot = 0.5*Omega(w_hat)*dq_0;
     Eigen::Vector3d p0_dot = v_0;
-    Eigen::Matrix3d R_Gto0 = quat_2_Rot(quat_multiply(dq_0,q_0));
     Eigen::Vector3d v0_dot = R_Gto0.transpose()*a_hat-_gravity;
 
     Eigen::Vector4d k1_q = q0_dot*dt;
@@ -415,12 +422,12 @@ void Propagator::predict_mean_rk4(State *state, double dt,
     a_hat += 0.5*a_jerk*dt;
 
     Eigen::Vector4d dq_1 = quatnorm(dq_0+0.5*k1_q);
+    Eigen::Matrix3d R_Gto1 = quat_2_Rot(quat_multiply(dq_1,q_0));
     //Eigen::Vector3d p_1 = p_0+0.5*k1_p;
     Eigen::Vector3d v_1 = v_0+0.5*k1_v;
 
     Eigen::Vector4d q1_dot = 0.5*Omega(w_hat)*dq_1;
     Eigen::Vector3d p1_dot = v_1;
-    Eigen::Matrix3d R_Gto1 = quat_2_Rot(quat_multiply(dq_1,q_0));
     Eigen::Vector3d v1_dot = R_Gto1.transpose()*a_hat-_gravity;
 
     Eigen::Vector4d k2_q = q1_dot*dt;
@@ -429,12 +436,12 @@ void Propagator::predict_mean_rk4(State *state, double dt,
 
     // k3 ================
     Eigen::Vector4d dq_2 = quatnorm(dq_0+0.5*k2_q);
+    Eigen::Matrix3d R_Gto2 = quat_2_Rot(quat_multiply(dq_2,q_0));
     //Eigen::Vector3d p_2 = p_0+0.5*k2_p;
     Eigen::Vector3d v_2 = v_0+0.5*k2_v;
 
     Eigen::Vector4d q2_dot = 0.5*Omega(w_hat)*dq_2;
     Eigen::Vector3d p2_dot = v_2;
-    Eigen::Matrix3d R_Gto2 = quat_2_Rot(quat_multiply(dq_2,q_0));
     Eigen::Vector3d v2_dot = R_Gto2.transpose()*a_hat-_gravity;
 
     Eigen::Vector4d k3_q = q2_dot*dt;
@@ -446,12 +453,12 @@ void Propagator::predict_mean_rk4(State *state, double dt,
     a_hat += 0.5*a_jerk*dt;
 
     Eigen::Vector4d dq_3 = quatnorm(dq_0+k3_q);
+    Eigen::Matrix3d R_Gto3 = quat_2_Rot(quat_multiply(dq_3,q_0));
     //Eigen::Vector3d p_3 = p_0+k3_p;
     Eigen::Vector3d v_3 = v_0+k3_v;
 
     Eigen::Vector4d q3_dot = 0.5*Omega(w_hat)*dq_3;
     Eigen::Vector3d p3_dot = v_3;
-    Eigen::Matrix3d R_Gto3 = quat_2_Rot(quat_multiply(dq_3,q_0));
     Eigen::Vector3d v3_dot = R_Gto3.transpose()*a_hat-_gravity;
 
     Eigen::Vector4d k4_q = q3_dot*dt;

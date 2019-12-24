@@ -320,6 +320,7 @@ VioManager::VioManager(ros::NodeHandle &nh) {
         trackARUCO->set_calibration(camera_calib, camera_fisheye);
     }
 
+    // TODO:
     // Initialize our state propagator
     propagator = new Propagator(imu_noises,gravity);
 
@@ -373,6 +374,7 @@ void VioManager::feed_measurement_monocular(double timestamp, cv::Mat& img0, siz
         if(!is_initialized_vio) return;
     }
 
+    // TODO: 
     // Call on our propagate and update function
     do_feature_propagate_update(timestamp);
 
@@ -456,6 +458,12 @@ void VioManager::feed_measurement_simulation(double timestamp, const std::vector
 }
 
 
+/**
+ * @brief 
+ * 
+ * @return true 
+ * @return false 
+ */
 bool VioManager::try_to_initialize() {
 
         // Returns from our initializer
@@ -597,7 +605,8 @@ void VioManager::do_feature_propagate_update(double timestamp) {
     if(state->options().max_slam_features > 0 && timestamp-startup_time >= dt_statupdelay && (int)state->features_SLAM().size() < state->options().max_slam_features+curr_aruco_tags) {
         // Get the total amount to add, then the max amount that we can add given our marginalize feature array
         int amount_to_add = (state->options().max_slam_features+curr_aruco_tags)-(int)state->features_SLAM().size();
-        int valid_amount = (amount_to_add > (int)feats_maxtracks.size())? (int)feats_maxtracks.size() : amount_to_add;
+        // int valid_amount = (amount_to_add > (int)feats_maxtracks.size())? (int)feats_maxtracks.size() : amount_to_add;
+        int valid_amount = min(amount_to_add, (int)feats_maxtracks.size());
         // If we have at least 1 that we can add, lets add it!
         // Note: we remove them from the feat_marg array since we don't want to reuse information...
         if(valid_amount > 0) {
@@ -622,6 +631,7 @@ void VioManager::do_feature_propagate_update(double timestamp) {
     // Lets marginalize out all old SLAM features here
     // These are ones that where not successfully tracked into the current frame
     // We do *NOT* marginalize out our aruco tags
+    // TODO: 这些 lost slam feature 不会跟 feats_lost 冲突吗？
     StateHelper::marginalize_slam(state);
 
     // Separate our SLAM features into new ones, and old ones
@@ -637,6 +647,7 @@ void VioManager::do_feature_propagate_update(double timestamp) {
     }
 
     // Concatenate our MSCKF feature arrays (i.e., ones not being used for slam updates)
+    // 1. lost; 2. marginalize(in oldest frame); 3. maxtracks but not being used as slam feature
     std::vector<Feature*> featsup_MSCKF = feats_lost;
     featsup_MSCKF.insert(featsup_MSCKF.end(), feats_marg.begin(), feats_marg.end());
     featsup_MSCKF.insert(featsup_MSCKF.end(), feats_maxtracks.begin(), feats_maxtracks.end());

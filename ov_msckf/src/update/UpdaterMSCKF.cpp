@@ -28,7 +28,12 @@ using namespace ov_msckf;
 
 
 
-
+/**
+ * @brief 这里的 order 数组和 mapping 相互配合减少内存占用的技巧值得一学
+ * 
+ * @param state 
+ * @param feature_vec 
+ */
 void UpdaterMSCKF::update(State *state, std::vector<Feature*>& feature_vec) {
 
     // Return if no features

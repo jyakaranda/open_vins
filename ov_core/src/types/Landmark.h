@@ -39,7 +39,8 @@ namespace ov_core {
     class Landmark : public Vec {
 
     public:
-
+        // 根据 representation 的不同，value 和 fej 存储的内容也不同，
+        // 但这里开放的 set/get 接口都是直接对 xyz 进行操作的
         /// Default constructor (feature is always a Vec of size 3)
         Landmark() : Vec(3) {}
 

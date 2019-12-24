@@ -94,6 +94,7 @@ bool FeatureInitializer::single_triangulation(Feature* feat, std::unordered_map<
         }
     }
     feat->anchor_cam_id = anchor_most_meas;
+    // TODO: 不是说 first measurement 吗？timestamps.at(feat->anchor_cam_id).back() 难道不是最后一个观测吗？
     feat->anchor_clone_timestamp = feat->timestamps.at(feat->anchor_cam_id).back();
 
     // Our linear system matrices
@@ -304,6 +305,7 @@ bool FeatureInitializer::single_gaussnewton(Feature* feat, std::unordered_map<si
     feat->p_FinA(1) = beta/rho;
     feat->p_FinA(2) = 1/rho;
 
+    // TODO: 这里的 baseline 的实际意义是什么？
     // Get tangent plane to x_hat
     Eigen::HouseholderQR<Eigen::MatrixXd> qr(feat->p_FinA);
     Eigen::MatrixXd Q = qr.householderQ();

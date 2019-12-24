@@ -69,7 +69,7 @@ bool InertialInitializer::initialize_with_imu(double &time0, Eigen::Matrix<doubl
         }
     }
 
-    // Return if both of these failed
+    // Return if either of these failed
     if(window_newest.empty() || window_secondnew.empty()) {
         //ROS_WARN("InertialInitializer::initialize_with_imu(): unable to select window of IMU readings, not enough readings");
         return false;
@@ -88,6 +88,7 @@ bool InertialInitializer::initialize_with_imu(double &time0, Eigen::Matrix<doubl
     a_var = std::sqrt(a_var/((int)window_newest.size()-1));
 
     // If it is below the threshold just return
+    // TODO: 这是为什么，为什么要让 window_newest 包含一定的运动才能初始化？不是说要静止才能初始化么
     if(a_var < _imu_excite_threshold) {
         ROS_WARN("InertialInitializer::initialize_with_imu(): no IMU excitation, below threshold %.4f < %.4f",a_var,_imu_excite_threshold);
         return false;
@@ -122,7 +123,7 @@ bool InertialInitializer::initialize_with_imu(double &time0, Eigen::Matrix<doubl
     Eigen::Vector3d x_axis = e_1-z_axis*z_axis.transpose()*e_1;
     x_axis= x_axis/x_axis.norm();
 
-    // Get z from the cross product of these two
+    // Get y from the cross product of these two
     Eigen::Matrix<double,3,1> y_axis = skew_x(z_axis)*x_axis;
 
     // From these axes get rotation

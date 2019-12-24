@@ -253,7 +253,20 @@ Type* StateHelper::clone(State *state, Type *variable_to_clone) {
 
 
 
-
+/**
+ * @brief RSS2012SupplimentalMaterial
+ * 
+ * @param state 
+ * @param new_variable 
+ * @param H_order 
+ * @param H_R 
+ * @param H_L 
+ * @param R 
+ * @param res 
+ * @param chi_2_mult 
+ * @return true 
+ * @return false 
+ */
 bool StateHelper::initialize(State *state, Type *new_variable, const std::vector<Type *> &H_order, Eigen::MatrixXd &H_R,
                              Eigen::MatrixXd &H_L, Eigen::MatrixXd &R, Eigen::VectorXd &res, double chi_2_mult) {
 
@@ -305,13 +318,18 @@ bool StateHelper::initialize(State *state, Type *new_variable, const std::vector
 
     // Separate into initializing and updating portions
     // 1. Invertible initializing system
+    // H_i^1
     Eigen::MatrixXd Hxinit = H_R.block(0, 0, new_var_size, H_R.cols());
+    // H_i^2
     Eigen::MatrixXd H_finit = H_L.block(0, 0, new_var_size, new_var_size);
+    // z_i^1
     Eigen::VectorXd resinit = res.block(0, 0, new_var_size, 1);
     Eigen::MatrixXd Rinit = R.block(0, 0, new_var_size, new_var_size);
 
     // 2. Nullspace projected updating system
+    // H_i^o
     Eigen::MatrixXd Hup = H_R.block(new_var_size, 0, H_R.rows() - new_var_size, H_R.cols());
+    // z_i^o
     Eigen::VectorXd resup = res.block(new_var_size, 0, res.rows() - new_var_size, 1);
     Eigen::MatrixXd Rup = R.block(new_var_size, new_var_size, R.rows() - new_var_size, R.rows() - new_var_size);
 
@@ -393,6 +411,7 @@ void StateHelper::initialize_invertible(State *state, Type *new_variable, const 
     //==========================================================
     //==========================================================
     // For each active variable find its M = P*H^T
+    // M_a = P * H_1^T
     for (Type *var: state->variables()) {
         // Sum up effect of each subjacobian= K_i= \sum_m (P_im Hm^T)
         Eigen::MatrixXd M_i = Eigen::MatrixXd::Zero(var->size(), res.rows());

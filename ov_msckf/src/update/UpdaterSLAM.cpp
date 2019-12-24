@@ -380,6 +380,7 @@ void UpdaterSLAM::update(State *state, std::vector<Feature*>& feature_vec) {
     R_big.conservativeResize(ct_meas,ct_meas);
 
     // 5. With all good SLAM features update the state
+    // 没有 compress，直接就更新了
     StateHelper::EKFUpdate(state, Hx_order_big, Hx_big, res_big, R_big);
     rT3 =  boost::posix_time::microsec_clock::local_time();
 

@@ -1,0 +1,11 @@
+<launch>
+
+  <node name="recorder_estimate" pkg="ov_eval" type="pose_to_file" output="screen">
+    <param name="topic" type="str" value="/groundtruth/pose" />
+    <param name="topic_type" type="str" value="PoseStamped" />
+    <param name="output" type="str" value="/home/zh/workspace/datasets/indoor_forward_6_gt.txt" />
+  </node>
+
+  <!-- <node pkg="rosbag" type="play" name="player" args="/home/zh/workspace/datasets/indoor_forward_6_davis_with_gt.bag - -clock -r 5" /> -->
+
+</launch>
